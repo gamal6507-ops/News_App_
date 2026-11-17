@@ -10,6 +10,7 @@ class NewsCountry {
 }
 
 class NewsCountryService {
+  int _selectionRevision = 0;
   static const _boxName = 'app_settings';
   static const _countryCodeKey = 'news_country_code';
   static const _countryNameKey = 'news_country_name';
@@ -32,6 +33,7 @@ class NewsCountryService {
 
   // GPS أولًا، والخدمة تدعم IP fallback.
   Future<NewsCountry> detectAndSave() async {
+    final revision = _selectionRevision;
     try {
       // 1. التأكد إن خدمة الموقع شغالة.
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -76,14 +78,14 @@ class NewsCountryService {
       final country = NewsCountry(code: code, name: name);
 
       // 5. حفظ الدولة في Hive.
-      await save(country);
+      if (revision == _selectionRevision) await save(country);
 
       return country;
     } catch (_) {
       // لو التحديد فشل، نستخدم مصر كقيمة افتراضية.
       const fallback = NewsCountry(code: 'eg', name: 'Egypt');
 
-      await save(fallback);
+      if (revision == _selectionRevision) await save(fallback);
 
       return fallback;
     }
@@ -91,6 +93,7 @@ class NewsCountryService {
 
   // حفظ الدولة التي اختارها المستخدم.
   Future<void> save(NewsCountry country) async {
+    _selectionRevision++;
     final box = Hive.box(_boxName);
     await box.put(_countryCodeKey, country.code.toLowerCase());
 
