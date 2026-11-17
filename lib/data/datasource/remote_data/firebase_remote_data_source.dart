@@ -113,7 +113,11 @@ class AuthFirebaseDataSource {
   }
 
   Future<void> logout() async {
-    await Future.wait([firebaseAuth.signOut(), googleSignIn.signOut()]);
+    if (kIsWeb) {
+      await firebaseAuth.signOut();
+    } else {
+      await Future.wait([firebaseAuth.signOut(), googleSignIn.signOut()]);
+    }
   }
 
   UserModel? getCurrentUser() {

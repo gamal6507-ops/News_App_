@@ -8,6 +8,9 @@ Firebase authentication, headline categories, search, saved articles, and themes
 Use Flutter 3.50.0 and Node.js 24 or newer. Create an ignored `.env` file with
 `NEWS_API_KEY` and, for mobile Google sign-in, `GOOGLE_WEB_CLIENT_ID`.
 Firebase client configuration is in `lib/firebase_options.dart`.
+The web app uses `news-app-five` via `lib/firebase_web_options.dart`.
+Native apps retain their existing Firebase project. Accounts are specific to
+each project and are not transferred automatically.
 
 ```sh
 flutter pub get

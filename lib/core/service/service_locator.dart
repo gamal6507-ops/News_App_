@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -41,15 +42,17 @@ Future<void> initServiceLocator() async {
   final searchLocalDataSource = SearchLocalDataSource();
   await searchLocalDataSource.init();
   final googleSignIn = GoogleSignIn.instance;
-  final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
-  try {
-    await googleSignIn.initialize(
-      clientId: (webClientId != null && webClientId.isNotEmpty)
-          ? webClientId
-          : null,
-    );
-  } catch (_) {
-    // Allow app startup even if GIS initialization fails (e.g., offline web).
+  if (!kIsWeb) {
+    final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
+    try {
+      await googleSignIn.initialize(
+        clientId: (webClientId != null && webClientId.isNotEmpty)
+            ? webClientId
+            : null,
+      );
+    } catch (_) {
+      // Allow startup while offline; native sign-in reports its own errors.
+    }
   }
   final themeLocalDataSource = ThemeModeLocalDataSource();
   await themeLocalDataSource.init();
