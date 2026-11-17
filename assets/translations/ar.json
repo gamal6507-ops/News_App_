@@ -133,5 +133,11 @@
     "Save": "حفظ",
     "Third-Party Services": "خدمات الطرف الثالث",
     "Unknown date": "تاريخ غير معروف",
-    "password too short": "يجب أن تكون كلمة المرور 6 أحرف على الأقل"
+    "password too short": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+    "Could not restore your session. Please sign in again.": "تعذّر استعادة جلستك. سجّل الدخول مرة أخرى.",
+    "Sign-in timed out. Close the old sign-in window and try again.": "انتهت مهلة تسجيل الدخول. أغلق نافذة الدخول القديمة وحاول مرة أخرى.",
+    "Allow pop-ups for this site, then try Google sign-in again.": "اسمح بالنوافذ المنبثقة لهذا الموقع ثم جرّب الدخول بجوجل مرة أخرى.",
+    "This website is not authorized for Google sign-in.": "هذا الموقع غير مضاف إلى النطاقات المسموح لها بالدخول بجوجل.",
+    "This sign-in method is not enabled.": "طريقة تسجيل الدخول هذه غير مفعّلة.",
+    "Your browser cannot store the sign-in session. Try opening the site in Chrome.": "المتصفح لا يستطيع حفظ جلسة الدخول. جرّب فتح الموقع في Chrome."
 }

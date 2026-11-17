@@ -75,7 +75,10 @@ class NewspapersApp extends StatelessWidget {
           create: (_) => service_locator.sl<SavedCubit>()..getSaved(),
         ),
         BlocProvider(create: (_) => service_locator.sl<ThemeCubit>()),
-        BlocProvider(create: (_) => service_locator.sl<AuthCubit>()),
+        BlocProvider(
+          lazy: false,
+          create: (_) => service_locator.sl<AuthCubit>(),
+        ),
       ],
 
       child: BlocBuilder<ThemeCubit, ThemeMode>(

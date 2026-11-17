@@ -149,6 +149,19 @@ class AuthFirebaseDataSource {
         return 'No internet connection.'.tr();
       case 'too-many-requests':
         return 'Too many attempts. Please try again later.'.tr();
+      case 'popup-closed-by-user':
+      case 'cancelled-popup-request':
+        return 'Sign in cancelled.';
+      case 'popup-blocked':
+        return 'Allow pop-ups for this site, then try Google sign-in again.'
+            .tr();
+      case 'unauthorized-domain':
+        return 'This website is not authorized for Google sign-in.'.tr();
+      case 'operation-not-allowed':
+        return 'This sign-in method is not enabled.'.tr();
+      case 'web-storage-unsupported':
+        return 'Your browser cannot store the sign-in session. Try opening the site in Chrome.'
+            .tr();
       default:
         return 'Authentication failed. Please try again.'.tr();
     }

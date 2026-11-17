@@ -23,9 +23,16 @@ class _SplashPageState extends State<SplashPage> {
     _timer = Timer(const Duration(milliseconds: 1200), _navigateNext);
   }
 
-  void _navigateNext() {
+  Future<void> _navigateNext() async {
     if (!mounted) return;
-    final authState = context.read<AuthCubit>().state;
+    final authCubit = context.read<AuthCubit>();
+    try {
+      await authCubit.ready.timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      // Allow a retry from login if browser session storage cannot initialize.
+    }
+    if (!mounted) return;
+    final authState = authCubit.state;
     final targetRoute = authState is AuthSuccess
         ? AppRoutes.homePageRoute
         : AppRoutes.loginPageRoute;
@@ -50,14 +57,9 @@ class _SplashPageState extends State<SplashPage> {
           builder: (context, scale, child) {
             return Transform.scale(scale: scale, child: child);
           },
-          child: Image.asset(
-            _logoAsset,
-            width: 220,
-            fit: BoxFit.contain,
-          ),
+          child: Image.asset(_logoAsset, width: 220, fit: BoxFit.contain),
         ),
       ),
     );
   }
 }
-
