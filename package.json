@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test test/api_news_test.cjs"
+    "test": "node --test test/*.cjs"
   },
   "engines": {
     "node": ">=24"

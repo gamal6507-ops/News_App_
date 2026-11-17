@@ -4,6 +4,7 @@ const ALLOWED_ENDPOINTS = new Set([
   'v2/top-headlines/sources',
 ]);
 const { fetchGoogleNews } = require('../server/google_news.cjs');
+const { fetchBingNews } = require('../server/bing_news.cjs');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -49,7 +50,7 @@ module.exports = async function handler(req, res) {
     }
     targetUrl.searchParams.set('apiKey', apiKey);
 
-    const upstream = await fetch(targetUrl, { signal: AbortSignal.timeout(4000) });
+    const upstream = await fetch(targetUrl, { signal: AbortSignal.timeout(3000) });
     const body = await upstream.text();
     const contentType = upstream.headers.get('content-type') || 'application/json';
     originalResponse = { status: upstream.status, body, contentType };
@@ -64,6 +65,14 @@ module.exports = async function handler(req, res) {
       return res.status(400).json(data);
     }
   } catch (_) { /* Try the independent feed provider. */ }
+
+  try {
+    if (endpoint !== 'v2/top-headlines/sources') {
+      const data = await fetchBingNews(endpoint, query);
+      res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+      return res.status(200).json(data);
+    }
+  } catch (_) { /* Keep the text feed as a final fallback. */ }
 
   try {
     const data = await fetchGoogleNews(endpoint, query);

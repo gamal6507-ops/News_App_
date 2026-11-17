@@ -22,13 +22,19 @@ flutter analyze --no-fatal-infos
 Local web uses the NewsAPI key from `.env`. Production web uses the same-origin
 `/api/news` server function. Set `NEWS_API_KEY` in Vercel Production and Preview.
 
-The deployed API falls back to live Google News RSS if NewsAPI is unavailable,
-unconfigured, or has no matching news. Regional headlines, categories, and search
-are mapped to the existing JSON format. Feed results have finite pagination;
-publisher thumbnails and full text may be unavailable. Articles without images
-use the app's placeholder. Date/language/source search filters are passed to the
-feed query; relevance and popularity follow the feed's ordering. Native builds
-continue using NewsAPI directly.
+The deployed API falls back to Bing News RSS if NewsAPI is unavailable,
+unconfigured, or has no matching news, with Google News RSS as a final fallback.
+Bing supplies article thumbnails and original publisher links. The fixed-host
+`/api/news-image?id=...` proxy serves image bytes from Bing to avoid browser image
+CORS restrictions; it rejects arbitrary URLs, redirects, non-image bodies, and
+responses larger than 2 MB. Its generated URLs default to the production domain;
+set `PUBLIC_APP_ORIGIN` when moving the app to another domain.
+
+Regional headlines, categories, and search use the existing JSON format. Feed
+results have finite pagination. Images and full text can still be absent for
+individual stories, which use the existing placeholder. Date/language/source
+filters are applied to fallback search; relevance and popularity follow feed
+ordering. Native builds continue using NewsAPI directly.
 
 ## Web deployment
 

@@ -50,7 +50,7 @@ function buildFeedUrl(endpoint, query) {
 }
 
 async function fetchGoogleNews(endpoint, query) {
-  const upstream = await fetch(buildFeedUrl(endpoint, query), { signal: AbortSignal.timeout(4500) });
+  const upstream = await fetch(buildFeedUrl(endpoint, query), { signal: AbortSignal.timeout(3000) });
   if (!upstream.ok) throw new Error('Feed unavailable');
   const xml = await upstream.text();
   if (xml.length > 2_000_000 || /<!DOCTYPE/i.test(xml) || XMLValidator.validate(xml) !== true) throw new Error('Invalid feed');
