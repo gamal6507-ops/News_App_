@@ -1,17 +1,45 @@
-# news_paper_app
+# Al Akhbar
 
-A new Flutter project.
+A Flutter news application for web and mobile, with Arabic/English support,
+Firebase authentication, headline categories, search, saved articles, and themes.
 
-## Getting Started
+## Local development
 
-This project is a starting point for a Flutter application.
+Use Flutter 3.50.0 and Node.js 24 or newer. Create an ignored `.env` file with
+`NEWS_API_KEY` and, for mobile Google sign-in, `GOOGLE_WEB_CLIENT_ID`.
+Firebase client configuration is in `lib/firebase_options.dart`.
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+flutter pub get
+flutter run -d chrome
+flutter test
+flutter analyze --no-fatal-infos
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Local web uses the NewsAPI key from `.env`. Production web uses the same-origin
+`/api/news` server function. Set `NEWS_API_KEY` in Vercel Production and Preview.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Web deployment
+
+`vercel.json` builds from source using `scripts/vercel-build.sh` and serves
+`build/web`. Connect the GitHub repository to Vercel for automatic deployments.
+The build pins Flutter, temporarily empties the `.env` asset, and removes its
+generated public copy. Never upload real environment files.
+
+Verify the same build locally with `node scripts/build-web.cjs`.
+
+Authorize the production hostname in Firebase Authentication and enable Google
+sign-in. Native notification scheduling is mobile-only; the web retains the
+in-app notification list.
+
+## Validation
+
+```sh
+flutter test
+node --test test/api_news_test.cjs
+flutter analyze --no-fatal-infos
+node scripts/build-web.cjs
+```
+
+Flutter 3.50 reports informational deprecations for legacy Material imports.
+They do not prevent builds; migrating these imports is a separate update.

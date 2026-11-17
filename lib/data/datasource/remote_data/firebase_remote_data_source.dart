@@ -1,6 +1,7 @@
 // data/datasources/auth_firebase_data_source.dart
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:news_paper_app/core/errors/exceptions.dart';
 import 'package:news_paper_app/data/models/user_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -36,16 +37,21 @@ class AuthFirebaseDataSource {
 
   Future<UserModel> signInWithGoogle() async {
     try {
-      final googleUser = await googleSignIn.authenticate();
-      final googleAuth = googleUser.authentication;
+      final firebase.UserCredential userCredential;
+      if (kIsWeb) {
+        userCredential = await firebaseAuth.signInWithPopup(
+          firebase.GoogleAuthProvider(),
+        );
+      } else {
+        final googleUser = await googleSignIn.authenticate();
+        final googleAuth = googleUser.authentication;
 
-      final credential = firebase.GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-      );
+        final credential = firebase.GoogleAuthProvider.credential(
+          idToken: googleAuth.idToken,
+        );
 
-      final userCredential = await firebaseAuth.signInWithCredential(
-        credential,
-      );
+        userCredential = await firebaseAuth.signInWithCredential(credential);
+      }
 
       final user = userCredential.user;
       if (user == null) {

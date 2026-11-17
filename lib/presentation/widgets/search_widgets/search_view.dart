@@ -100,9 +100,9 @@ class _SearchViewState extends State<SearchView> {
                               if (Navigator.of(context).canPop()) {
                                 Navigator.of(context).pop();
                               } else {
-                                Navigator.of(context).pushReplacementNamed(
-                                  AppRoutes.homePageRoute,
-                                );
+                                Navigator.of(
+                                  context,
+                                ).pushReplacementNamed(AppRoutes.homePageRoute);
                               }
                             },
                             onSubmitted: (query) {
@@ -114,6 +114,7 @@ class _SearchViewState extends State<SearchView> {
                               _performSearch(query);
                             },
                             suffixIconOnPressed: (query) {
+                              _debounce?.cancel();
                               _searchController.clear();
                               context.read<SearchCubit>().getRecentSearches();
                             },
@@ -123,10 +124,9 @@ class _SearchViewState extends State<SearchView> {
                         IconButton.filledTonal(
                           icon: const Icon(Icons.tune),
                           tooltip: 'Filter'.tr(),
-                          onPressed:
-                              value.text.trim().isNotEmpty
-                                  ? () => SearchFilterSheet.show(context)
-                                  : null,
+                          onPressed: value.text.trim().isNotEmpty
+                              ? () => SearchFilterSheet.show(context)
+                              : null,
                         ),
                       ],
                     );
@@ -148,16 +148,20 @@ class _SearchViewState extends State<SearchView> {
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Recent Searches'.tr(),
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                   TextButton(
-                                    onPressed: () => context.read<SearchCubit>().clearSearches(),
+                                    onPressed: () => context
+                                        .read<SearchCubit>()
+                                        .clearSearches(),
                                     child: Text('Clear'.tr()),
                                   ),
                                 ],
@@ -165,7 +169,10 @@ class _SearchViewState extends State<SearchView> {
                             ),
                           ),
                           SliverList(
-                            delegate: SliverChildBuilderDelegate((context, index) {
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
                               final search = searches[index];
                               return ListTile(
                                 contentPadding: EdgeInsets.zero,
@@ -173,7 +180,9 @@ class _SearchViewState extends State<SearchView> {
                                 title: Text(search.tr()),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.close),
-                                  onPressed: () => context.read<SearchCubit>().removeSearch(search),
+                                  onPressed: () => context
+                                      .read<SearchCubit>()
+                                      .removeSearch(search),
                                 ),
                                 onTap: () {
                                   _searchController.text = search;
@@ -186,7 +195,8 @@ class _SearchViewState extends State<SearchView> {
                         ],
                         SliverToBoxAdapter(
                           child: TrendingTopics(
-                            onTopicSelected: (value) => _selectTrendingTopic(value),
+                            onTopicSelected: (value) =>
+                                _selectTrendingTopic(value),
                           ),
                         ),
                       ],

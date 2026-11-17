@@ -41,7 +41,16 @@ Future<void> initServiceLocator() async {
   final searchLocalDataSource = SearchLocalDataSource();
   await searchLocalDataSource.init();
   final googleSignIn = GoogleSignIn.instance;
-  await googleSignIn.initialize(clientId: dotenv.env['GOOGLE_WEB_CLIENT_ID']);
+  final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
+  try {
+    await googleSignIn.initialize(
+      clientId: (webClientId != null && webClientId.isNotEmpty)
+          ? webClientId
+          : null,
+    );
+  } catch (_) {
+    // Allow app startup even if GIS initialization fails (e.g., offline web).
+  }
   final themeLocalDataSource = ThemeModeLocalDataSource();
   await themeLocalDataSource.init();
   sl.registerLazySingleton<NewsLocalDataSource>(() => newsLocalDataSource);

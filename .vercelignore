@@ -1,0 +1,12 @@
+.git
+.dart_tool
+.vercel
+.env*
+build
+android
+ios
+linux
+macos
+windows
+testsprite_tests
+coverage

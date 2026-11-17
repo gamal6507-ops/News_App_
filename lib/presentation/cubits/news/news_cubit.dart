@@ -13,6 +13,8 @@ class NewsCubit extends Cubit<NewsState> {
   final List<Article> _articles = [];
 
   String? _country;
+  String? _category;
+  int _requestId = 0;
   int _currentPage = 1;
   int _totalResult = 0;
 
@@ -29,6 +31,13 @@ class NewsCubit extends Cubit<NewsState> {
     String? category,
     bool refresh = false,
   }) async {
+    if (isClosed) return;
+    final requestId = ++_requestId;
+    final nextCategory = category?.trim().toLowerCase();
+    if (nextCategory != null && nextCategory != _category) {
+      _category = nextCategory.isEmpty ? null : nextCategory;
+      refresh = true;
+    }
     if (country != null) {
       final newCountryCode = country.toLowerCase();
 
@@ -40,10 +49,11 @@ class NewsCubit extends Cubit<NewsState> {
         _totalResult = 0;
         _isLoadingMore = false;
         _hasMore = true;
+        refresh = true;
       }
     }
     debugPrint('GET TOP HEADLINES CALLED');
-    if (_isLoadingMore) return;
+    _isLoadingMore = false;
 
     if (refresh) {
       _currentPage = 1;
@@ -57,13 +67,14 @@ class NewsCubit extends Cubit<NewsState> {
     try {
       debugPrint('API RESULT RECEIVED');
       final result = await getTopHeadlinesUseCase(
-        country: country,
-        category: category,
+        country: _country,
+        category: _category,
         page: _currentPage,
         pageSize: 12,
       );
 
       final newArticles = result.articles;
+      if (isClosed || requestId != _requestId) return;
       debugPrint('Total Results: ${result.totalResults}');
       debugPrint('Articles Count: ${newArticles.length}');
       _totalResult = result.totalResults;
@@ -75,22 +86,27 @@ class NewsCubit extends Cubit<NewsState> {
       _hasMore = newArticles.length == 12;
       emit(NewsLoaded(List.unmodifiable(_articles), hasMore: _hasMore));
     } on NetworkException catch (e) {
+      if (isClosed || requestId != _requestId) return;
       emit(NewsError(e.message));
     } on ServerException catch (e) {
+      if (isClosed || requestId != _requestId) return;
       emit(NewsError(e.message));
     } on CacheException catch (e) {
+      if (isClosed || requestId != _requestId) return;
       emit(NewsError(e.message));
     } catch (_) {
+      if (isClosed || requestId != _requestId) return;
       emit(const NewsError('Something went wrong. Please try again.'));
     }
   }
 
-  Future<void> loadMore({String country = 'us', String? category}) async {
-    if (_isLoadingMore || !_hasMore) {
+  Future<void> loadMore({String? country, String? category}) async {
+    if (isClosed || _isLoadingMore || !_hasMore) {
       return;
     }
 
     _isLoadingMore = true;
+    final requestId = ++_requestId;
 
     emit(NewsLoadingMore(List.unmodifiable(_articles), hasMore: _hasMore));
 
@@ -98,12 +114,13 @@ class NewsCubit extends Cubit<NewsState> {
       final nextPage = _currentPage + 1;
 
       final result = await getTopHeadlinesUseCase(
-        country: country,
-        category: category,
+        country: country ?? _country,
+        category: category?.toLowerCase() ?? _category,
         page: nextPage,
         pageSize: 12,
       );
       final newArticles = result.articles;
+      if (isClosed || requestId != _requestId) return;
       if (newArticles.isEmpty) {
         _hasMore = false;
       } else {
@@ -116,13 +133,22 @@ class NewsCubit extends Cubit<NewsState> {
 
       emit(NewsLoaded(List.unmodifiable(_articles), hasMore: _hasMore));
     } on NetworkException catch (_) {
+      if (isClosed || requestId != _requestId) return;
       emit(NewsLoaded(List.unmodifiable(_articles), hasMore: _hasMore));
     } on ServerException catch (_) {
+      if (isClosed || requestId != _requestId) return;
       emit(NewsLoaded(List.unmodifiable(_articles), hasMore: _hasMore));
     } catch (_) {
+      if (isClosed || requestId != _requestId) return;
       emit(NewsLoaded(List.unmodifiable(_articles), hasMore: _hasMore));
     } finally {
-      _isLoadingMore = false;
+      if (requestId == _requestId) _isLoadingMore = false;
     }
+  }
+
+  @override
+  Future<void> close() {
+    _requestId++;
+    return super.close();
   }
 }

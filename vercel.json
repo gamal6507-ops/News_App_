@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bash scripts/vercel-build.sh",
+  "installCommand": "",
+  "outputDirectory": "build/web",
+  "rewrites": [
+    {
+      "source": "/api/news/(.*)",
+      "destination": "/api/news?endpoint=$1"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

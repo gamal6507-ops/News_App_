@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/adapters.dart';
@@ -52,6 +53,7 @@ class NotificationService {
   static const int _inactivityReminderId = 999999;
 
   Future<void> scheduleInactivityReminder() async {
+    if (kIsWeb) return;
     await _localNotifications.cancel(_inactivityReminderId);
 
     final scheduledDate = tz.TZDateTime.now(
@@ -81,6 +83,7 @@ class NotificationService {
   }
 
   Future<void> cancelInactivityReminder() async {
+    if (kIsWeb) return;
     await _localNotifications.cancel(_inactivityReminderId);
   }
 
@@ -94,11 +97,11 @@ class NotificationService {
   );
 
   Future<void> initialize() async {
-    final androidPlugin =
-        _localNotifications
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
+    if (kIsWeb) return;
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
     await androidPlugin?.requestNotificationsPermission();
     await androidPlugin?.requestExactAlarmsPermission();
@@ -172,13 +175,22 @@ class NotificationService {
     navigatorKey.currentState?.pushNamed(AppRoutes.notificationPageRoute);
   }
 
-  Future<String?> getToken() => _firebaseMessaging.getToken();
+  Future<String?> getToken() async {
+    if (kIsWeb) return null;
+    try {
+      return await _firebaseMessaging.getToken();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> showLocalNotification({
     required String title,
     required String body,
   }) async {
-    _showLocalNotification(title: title, body: body);
+    if (!kIsWeb) {
+      _showLocalNotification(title: title, body: body);
+    }
     await NotificationStorageService().add(
       NotificationItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),

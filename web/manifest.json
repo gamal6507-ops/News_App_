@@ -1,11 +1,11 @@
 {
-    "name": "news_paper_app",
-    "short_name": "news_paper_app",
+    "name": "Al Akhbar",
+    "short_name": "Al Akhbar",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#1B3B8B",
-    "description": "A new Flutter project.",
+    "description": "Latest headlines, news search, and saved articles in Arabic and English.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

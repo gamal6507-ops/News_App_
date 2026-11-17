@@ -23,8 +23,6 @@ class SearchCubit extends Cubit<SearchState> {
 
   int _searchRequestId = 0;
 
-  int _suggestionsRequestId = 0;
-
   int _totalPages = 1;
   static const int _pageSize = 12;
 
@@ -101,15 +99,18 @@ class SearchCubit extends Cubit<SearchState> {
   }
 
   Future<void> getRecentSearches() async {
+    final requestId = ++_searchRequestId;
     emit(SearchLoading());
 
     try {
       final searches = await baseSearchRepository.getRecentSearches();
-
+      if (requestId != _searchRequestId || isClosed) return;
       emit(RecentSearchesLoaded(searches: List.unmodifiable(searches)));
     } on CacheException catch (e) {
+      if (requestId != _searchRequestId || isClosed) return;
       emit(SearchError(message: e.message));
     } catch (_) {
+      if (requestId != _searchRequestId || isClosed) return;
       emit(
         const SearchError(message: 'Something went wrong. Please try again.'),
       );
@@ -174,13 +175,12 @@ class SearchCubit extends Cubit<SearchState> {
 
   Future<void> getSuggestions(String query) async {
     final trimmedQuery = query.trim();
+    final currentRequestId = ++_searchRequestId;
 
     if (trimmedQuery.isEmpty) {
       emit(const SearchSuggestionsLoaded(suggestions: []));
       return;
     }
-
-    final currentRequestId = ++_suggestionsRequestId;
 
     try {
       final result = await getEverythingUseCase(
@@ -189,19 +189,18 @@ class SearchCubit extends Cubit<SearchState> {
         pageSize: 10,
       );
 
-      if (currentRequestId != _suggestionsRequestId) return;
+      if (currentRequestId != _searchRequestId || isClosed) return;
 
-      final suggestions =
-          result.articles
-              .map((a) => a.title)
-              .whereType<String>()
-              .toSet()
-              .take(6)
-              .toList();
+      final suggestions = result.articles
+          .map((a) => a.title)
+          .whereType<String>()
+          .toSet()
+          .take(6)
+          .toList();
 
       emit(SearchSuggestionsLoaded(suggestions: suggestions));
     } catch (_) {
-      if (currentRequestId != _suggestionsRequestId) return;
+      if (currentRequestId != _searchRequestId || isClosed) return;
       emit(const SearchSuggestionsLoaded(suggestions: []));
     }
   }
@@ -214,5 +213,11 @@ class SearchCubit extends Cubit<SearchState> {
 
   void clearFilters() {
     _filter = const SearchFilter();
+  }
+
+  @override
+  Future<void> close() {
+    _searchRequestId++;
+    return super.close();
   }
 }

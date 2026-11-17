@@ -9,6 +9,7 @@ import 'package:news_paper_app/core/routes/app_router.dart';
 import 'package:news_paper_app/core/routes/app_routes.dart';
 import 'package:news_paper_app/core/theme/app_theme.dart';
 import 'package:news_paper_app/core/utils/responsive.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:news_paper_app/core/service/service_locator.dart'
@@ -26,17 +27,28 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
   tzl.setLocalLocation(tzl.getLocation('Africa/Cairo'));
-  await dotenv.load(fileName: ".env");
+  final isLocalWeb =
+      kIsWeb && (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1');
+  if (kIsWeb && !isLocalWeb) {
+    // Deployed web builds route NewsAPI calls via /api/news so secrets stay server-side.
+    dotenv.loadFromString(isOptional: true);
+  } else {
+    await dotenv.load(fileName: ".env", isOptional: kIsWeb);
+  }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
   await EasyLocalization.ensureInitialized();
   await service_locator.initServiceLocator();
   await Hive.initFlutter();
   await Hive.openBox('app_settings');
-  await NotificationService().initialize();
-  debugPrint('Before scheduling reminder');
-  await NotificationService().scheduleInactivityReminder();
-  debugPrint('After scheduling reminder');
+  if (!kIsWeb) {
+    await NotificationService().initialize();
+    debugPrint('Before scheduling reminder');
+    await NotificationService().scheduleInactivityReminder();
+    debugPrint('After scheduling reminder');
+  }
 
   runApp(
     EasyLocalization(

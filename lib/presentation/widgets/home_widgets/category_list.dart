@@ -57,7 +57,10 @@ class _CategoryListState extends State<CategoryList> {
                 selectedIndex = index;
               });
               if (index == 0) {
-                context.read<NewsCubit>().getTopHeadlines(refresh: true);
+                context.read<NewsCubit>().getTopHeadlines(
+                  category: '',
+                  refresh: true,
+                );
               } else {
                 context.read<NewsCubit>().getTopHeadlines(
                   category: categoriesEn[index],
@@ -73,8 +76,8 @@ class _CategoryListState extends State<CategoryList> {
               color: isSelected
                   ? Colors.white
                   : (theme.brightness == Brightness.light
-                      ? colorScheme.secondary
-                      : colorScheme.onSurface),
+                        ? colorScheme.secondary
+                        : colorScheme.onSurface),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
             side: BorderSide.none,
