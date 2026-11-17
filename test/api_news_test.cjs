@@ -29,18 +29,32 @@ test('rejects mutations and paths outside the NewsAPI allowlist', async () => {
   }
 });
 
-test('requires a configured server API key', async () => {
+const rss = (items) => `<?xml version="1.0"?><rss version="2.0"><channel>${items.map((item, index) => `<item><title>${item.title || `Headline ${index + 1}`}</title><link>${item.url || `https://news.google.com/rss/articles/article-${index}`}</link><pubDate>Tue, 17 Nov 2026 08:00:00 GMT</pubDate><source url="https://publisher.example">Publisher</source><description>&lt;p&gt;News summary&lt;/p&gt;</description></item>`).join('')}</channel></rss>`;
+
+test('serves current Egyptian feeds without requiring a NewsAPI key', async () => {
   delete process.env.NEWS_API_KEY;
+  let target;
+  global.fetch = async (url) => {
+    target = new URL(url);
+    return new Response(rss([{}]), { headers: { 'Content-Type': 'application/xml' } });
+  };
   const res = response();
-  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines' } }, res);
-  assert.equal(res.statusCode, 500);
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', country: 'eg', category: 'technology' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(target.origin, 'https://news.google.com');
+  assert.equal(target.pathname, '/rss/headlines/section/topic/TECHNOLOGY');
+  assert.equal(target.searchParams.get('ceid'), 'EG:ar');
+  assert.equal(target.searchParams.has('apiKey'), false);
+  assert.equal(res.body.articles[0].source.name, 'Publisher');
+  assert.equal(res.body.articles[0].urlToImage, null);
+  assert.equal(res.body.articles[0].description, 'News summary');
 });
 
 test('forwards filters with the server key and preserves upstream errors', async () => {
   process.env.NEWS_API_KEY = 'server-test-key';
   let target;
   global.fetch = async (url) => {
-    target = url;
+    target ||= url;
     return new Response('{"status":"error","code":"rateLimited"}', { status: 429, headers: { 'Content-Type': 'application/json' } });
   };
   const res = response();
@@ -53,6 +67,69 @@ test('forwards filters with the server key and preserves upstream errors', async
   assert.equal(target.searchParams.has('endpoint'), false);
   assert.equal(res.statusCode, 429);
   assert.equal(JSON.parse(res.body).code, 'rateLimited');
+});
+
+test('empty NewsAPI results fall back to regional headlines', async () => {
+  process.env.NEWS_API_KEY = 'server-test-key';
+  global.fetch = async (url) => new URL(url).hostname === 'newsapi.org'
+    ? Response.json({ status: 'ok', totalResults: 0, articles: [] })
+    : new Response(rss([{}]));
+  const res = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', country: 'eg' } }, res);
+  assert.equal(res.body.provider, 'google-news');
+  assert.equal(res.body.articles.length, 1);
+});
+
+test('upstream failures still serve fallback search with language and date filters', async () => {
+  process.env.NEWS_API_KEY = 'server-test-key';
+  let target;
+  global.fetch = async (url) => {
+    if (new URL(url).hostname === 'newsapi.org') throw new Error('offline');
+    target = new URL(url);
+    return new Response(rss([{}]));
+  };
+  const res = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/everything', q: 'علوم & تقنية', language: 'ar', from: '2026-11-01', to: '2026-11-17' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(target.pathname, '/rss/search');
+  assert.equal(target.searchParams.get('hl'), 'ar');
+  assert.match(target.searchParams.get('q'), /علوم & تقنية/);
+  assert.match(target.searchParams.get('q'), /after:2026-11-01/);
+  assert.match(target.searchParams.get('q'), /before:2026-11-18/);
+});
+
+test('exhausted NewsAPI pages remain empty without switching provider', async () => {
+  process.env.NEWS_API_KEY = 'server-test-key';
+  let calls = 0;
+  global.fetch = async () => { calls++; return Response.json({ status: 'ok', totalResults: 1, articles: [] }); };
+  const res = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/everything', q: 'technology', page: '2' } }, res);
+  assert.equal(calls, 1);
+  assert.equal(JSON.parse(res.body).articles.length, 0);
+});
+
+test('feed pagination is finite and duplicate or unsafe article links are discarded', async () => {
+  delete process.env.NEWS_API_KEY;
+  global.fetch = async () => new Response(rss([{url:'javascript:alert(1)'}, {url:'https://news.google.com/rss/articles/one'}, {url:'https://news.google.com/rss/articles/one'}, {url:'https://news.google.com/rss/articles/two'}]));
+  const res = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', page: '2', pageSize: '1' } }, res);
+  assert.equal(res.body.totalResults, 2);
+  assert.equal(res.body.articles.length, 1);
+  assert.equal(res.body.articles[0].url, 'https://news.google.com/rss/articles/two');
+  const last = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', page: '3', pageSize: '1' } }, last);
+  assert.equal(last.body.articles.length, 0);
+});
+
+test('invalid pages and malformed external feeds do not produce success payloads', async () => {
+  delete process.env.NEWS_API_KEY;
+  global.fetch = async () => new Response('<html>Service unavailable</html>');
+  const invalid = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', page: '-1' } }, invalid);
+  assert.equal(invalid.statusCode, 400);
+  const badFeed = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines' } }, badFeed);
+  assert.equal(badFeed.statusCode, 502);
 });
 
 test('returns a gateway error when upstream is unreachable', async () => {

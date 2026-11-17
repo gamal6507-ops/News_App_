@@ -14,18 +14,11 @@ class NewsResponseModel {
 
   factory NewsResponseModel.fromJson(Map<String, dynamic> json) {
     final articlesJson = json['articles'] as List<dynamic>? ?? [];
-    final articles =
-        articlesJson
-            .map(
-              (article) =>
-                  ArticleModel.fromJson(article as Map<String, dynamic>),
-            )
-            .where(
-              (article) =>
-                  article.imageUrl != null &&
-                  article.imageUrl!.trim().isNotEmpty,
-            )
-            .toList();
+    final articles = articlesJson
+        .map(
+          (article) => ArticleModel.fromJson(article as Map<String, dynamic>),
+        )
+        .toList();
 
     return NewsResponseModel(
       status: json['status'] as String? ?? 'error',

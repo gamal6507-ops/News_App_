@@ -22,6 +22,14 @@ flutter analyze --no-fatal-infos
 Local web uses the NewsAPI key from `.env`. Production web uses the same-origin
 `/api/news` server function. Set `NEWS_API_KEY` in Vercel Production and Preview.
 
+The deployed API falls back to live Google News RSS if NewsAPI is unavailable,
+unconfigured, or has no matching news. Regional headlines, categories, and search
+are mapped to the existing JSON format. Feed results have finite pagination;
+publisher thumbnails and full text may be unavailable. Articles without images
+use the app's placeholder. Date/language/source search filters are passed to the
+feed query; relevance and popularity follow the feed's ordering. Native builds
+continue using NewsAPI directly.
+
 ## Web deployment
 
 `vercel.json` builds from source using `scripts/vercel-build.sh` and serves
@@ -39,7 +47,8 @@ in-app notification list.
 
 ```sh
 flutter test
-node --test test/api_news_test.cjs
+npm ci --ignore-scripts
+npm test
 flutter analyze --no-fatal-infos
 node scripts/build-web.cjs
 ```
