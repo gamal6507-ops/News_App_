@@ -11,7 +11,6 @@ import 'package:news_paper_app/core/theme/app_theme.dart';
 import 'package:news_paper_app/core/utils/responsive.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:news_paper_app/core/service/service_locator.dart'
     as service_locator;
 import 'package:news_paper_app/firebase_options.dart';
@@ -27,14 +26,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
   tzl.setLocalLocation(tzl.getLocation('Africa/Cairo'));
-  final isLocalWeb =
-      kIsWeb && (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1');
-  if (kIsWeb && !isLocalWeb) {
-    // Deployed web builds route NewsAPI calls via /api/news so secrets stay server-side.
-    dotenv.loadFromString(isOptional: true);
-  } else {
-    await dotenv.load(fileName: ".env", isOptional: kIsWeb);
-  }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

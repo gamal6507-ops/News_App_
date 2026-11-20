@@ -20,6 +20,12 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ status: 'error', message: 'Method not allowed' });
   }
 
+  res.setHeader('Vary', 'Origin');
+  const origin = req.headers?.origin;
+  if (typeof origin === 'string' && /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
   const rawEndpoint = Array.isArray(req.query?.endpoint)
     ? req.query.endpoint.join('/')
     : (req.query?.endpoint || '');

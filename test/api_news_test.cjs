@@ -29,6 +29,16 @@ test('rejects mutations and paths outside the NewsAPI allowlist', async () => {
   }
 });
 
+test('only loopback development origins get cross-origin read access', async () => {
+  for (const [origin, allowed] of [['http://localhost:8080', true], ['http://127.0.0.1:8080', true], ['https://other.example', false], ['http://localhost.other.example:8080', false]]) {
+    const res = response();
+    await handler({ method: 'GET', headers: { origin }, query: {} }, res);
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.headers.Vary, 'Origin');
+    assert.equal(res.headers['Access-Control-Allow-Origin'], allowed ? origin : undefined);
+  }
+});
+
 const rss = (items) => `<?xml version="1.0"?><rss version="2.0"><channel>${items.map((item, index) => `<item><title>${item.title || `Headline ${index + 1}`}</title><link>${item.url || `https://news.google.com/rss/articles/article-${index}`}</link><pubDate>${item.date ?? new Date().toUTCString()}</pubDate><source url="https://publisher.example">Publisher</source><description>&lt;p&gt;News summary&lt;/p&gt;</description></item>`).join('')}</channel></rss>`;
 
 test('serves current Egyptian feeds without requiring a NewsAPI key', async () => {

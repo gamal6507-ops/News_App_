@@ -111,7 +111,6 @@ class NotificationService {
         >();
 
     await androidPlugin?.requestNotificationsPermission();
-    await androidPlugin?.requestExactAlarmsPermission();
     await _firebaseMessaging.requestPermission(
       alert: true,
       badge: true,

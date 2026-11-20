@@ -5,8 +5,10 @@ Firebase authentication, headline categories, search, saved articles, and themes
 
 ## Local development
 
-Use Flutter 3.50.0 and Node.js 24 or newer. Create an ignored `.env` file with
-`NEWS_API_KEY` and, for mobile Google sign-in, `GOOGLE_WEB_CLIENT_ID`.
+Use Flutter 3.50.0 and Node.js 24 or newer. Client builds need no `.env` file or
+NewsAPI key. If a native Google web client override is needed, pass its public ID
+with `--dart-define=GOOGLE_WEB_CLIENT_ID=...`; Android otherwise uses its Firebase
+configuration.
 Firebase client configuration is in `lib/firebase_options.dart`.
 The web app uses `news-app-five` via `lib/firebase_web_options.dart`.
 Native apps retain their existing Firebase project. Accounts are specific to
@@ -19,8 +21,9 @@ flutter test
 flutter analyze --no-fatal-infos
 ```
 
-Local web uses the NewsAPI key from `.env`. Production web uses the same-origin
-`/api/news` server function. Set `NEWS_API_KEY` in Vercel Production and Preview.
+Production web uses the same-origin `/api/news` server function. Native and local
+web builds use the production news service. Set `NEWS_API_KEY` only in Vercel
+Production and Preview. When moving the service, update `ApiConstants.baseUrl`.
 
 The deployed API falls back to Bing News RSS if NewsAPI is unavailable,
 unconfigured, or has no matching news, with Google News RSS as a final fallback.
@@ -34,14 +37,14 @@ Regional headlines, categories, and search use the existing JSON format. Feed
 results have finite pagination. Images and full text can still be absent for
 individual stories, which use the existing placeholder. Date/language/source
 filters are applied to fallback search; relevance and popularity follow feed
-ordering. Native builds continue using NewsAPI directly.
+ordering. Native builds use the same server fallbacks and image proxy as web.
 
 ## Web deployment
 
 `vercel.json` builds from source using `scripts/vercel-build.sh` and serves
 `build/web`. Connect the GitHub repository to Vercel for automatic deployments.
-The build pins Flutter, temporarily empties the `.env` asset, and removes its
-generated public copy. Never upload real environment files.
+The build pins Flutter. No client build declares a `.env` asset, so news provider
+credentials remain on the server. Never upload real environment files.
 
 Verify the same build locally with `node scripts/build-web.cjs`.
 
