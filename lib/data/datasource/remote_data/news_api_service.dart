@@ -78,9 +78,9 @@ class NewsApiService {
         ApiConstants.everyThing,
         queryParameters: {
           'q': query,
-          if (from != null) 'from': DateUtilsApp.formatDate(from),
+          if (from != null) 'from': DateUtilsApp.formatApiDate(from),
 
-          if (to != null) 'to': DateUtilsApp.formatDate(to),
+          if (to != null) 'to': DateUtilsApp.formatApiDate(to),
 
           'sources': ?sources,
           'language': ?language,

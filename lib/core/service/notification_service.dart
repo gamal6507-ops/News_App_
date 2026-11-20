@@ -5,12 +5,14 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:news_paper_app/core/routes/app_routes.dart';
 import 'package:news_paper_app/core/service/notification_storage_service.dart';
+import 'package:news_paper_app/core/service/notification_preferences.dart';
 import 'package:news_paper_app/domain/entities/notification_item.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Hive.initFlutter();
+  if (!Hive.isBoxOpen('app_settings')) await Hive.openBox('app_settings');
   await _saveMessageToStorage(message);
   debugPrint('Background message: ${message.messageId}');
 }
@@ -49,16 +51,17 @@ class NotificationService {
 
   final _firebaseMessaging = FirebaseMessaging.instance;
   final _localNotifications = FlutterLocalNotificationsPlugin();
-  final navigatorKey = GlobalKey<NavigatorState>();
+  static final navigatorKey = GlobalKey<NavigatorState>();
   static const int _inactivityReminderId = 999999;
+  bool _initialized = false;
 
   Future<void> scheduleInactivityReminder() async {
-    if (kIsWeb) return;
+    if (kIsWeb || !NotificationPreferences.enabled) return;
     await _localNotifications.cancel(_inactivityReminderId);
 
     final scheduledDate = tz.TZDateTime.now(
       tz.local,
-    ).add(const Duration(seconds: 10));
+    ).add(const Duration(hours: 24));
     debugPrint(
       'Scheduled for: $scheduledDate, now: ${tz.TZDateTime.now(tz.local)}',
     );
@@ -97,7 +100,11 @@ class NotificationService {
   );
 
   Future<void> initialize() async {
-    if (kIsWeb) return;
+    if (kIsWeb || _initialized) return;
+    if (!NotificationPreferences.enabled) {
+      await _firebaseMessaging.setAutoInitEnabled(false);
+      return;
+    }
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -112,6 +119,7 @@ class NotificationService {
     );
 
     await _initLocalNotifications();
+    _initialized = true;
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
@@ -155,6 +163,7 @@ class NotificationService {
   }
 
   void _showLocalNotification({required String title, required String body}) {
+    if (!NotificationPreferences.enabled) return;
     _localNotifications.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
@@ -176,7 +185,7 @@ class NotificationService {
   }
 
   Future<String?> getToken() async {
-    if (kIsWeb) return null;
+    if (kIsWeb || !NotificationPreferences.enabled) return null;
     try {
       return await _firebaseMessaging.getToken();
     } catch (_) {
@@ -188,6 +197,7 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
+    if (!NotificationPreferences.enabled) return;
     if (!kIsWeb) {
       _showLocalNotification(title: title, body: body);
     }
@@ -201,5 +211,19 @@ class NotificationService {
         isRead: false,
       ),
     );
+  }
+
+  Future<void> applyPreferences() async {
+    if (kIsWeb) return;
+    await _firebaseMessaging.setAutoInitEnabled(
+      NotificationPreferences.enabled,
+    );
+    if (!NotificationPreferences.enabled) {
+      await _localNotifications.cancelAll();
+      await _firebaseMessaging.deleteToken();
+    } else {
+      await initialize();
+      await scheduleInactivityReminder();
+    }
   }
 }

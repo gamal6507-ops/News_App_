@@ -1,9 +1,12 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_paper_app/core/routes/app_routes.dart';
 import 'package:news_paper_app/core/utils/responsive.dart';
+import 'package:news_paper_app/core/service/notification_preferences.dart';
+import 'package:news_paper_app/core/service/notification_service.dart';
 import 'package:news_paper_app/presentation/cubits/auth/auth_cubit.dart';
 import 'package:news_paper_app/presentation/cubits/country/country_cubit.dart';
 import 'package:news_paper_app/presentation/cubits/theme/theme_cubit.dart';
@@ -20,7 +23,23 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  bool _notifications = true;
+  bool _notifications = NotificationPreferences.enabled;
+
+  Future<void> _setNotifications(bool enabled) async {
+    await NotificationPreferences.setEnabled(enabled);
+    if (!mounted) return;
+    setState(() => _notifications = enabled);
+    if (!kIsWeb) {
+      try {
+        await NotificationService().applyPreferences();
+        if (enabled && mounted) {
+          await context.read<AuthCubit>().syncNotificationToken();
+        }
+      } catch (error) {
+        debugPrint('Could not sync notification preference: $error');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,43 +50,38 @@ class _SettingsViewState extends State<SettingsView> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       drawer: size.isCompact ? const AppDrawer() : null,
-      appBar:
-          size.isCompact
-              ? AppBar(
-                backgroundColor: theme.colorScheme.surface,
-                surfaceTintColor: theme.colorScheme.surface,
-                elevation: 0,
-                centerTitle: true,
-                leading: Builder(
-                  builder: (context) {
-                    return IconButton(
-                      icon: Icon(
-                        Icons.menu,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                    );
-                  },
-                ),
-                title: Text(
-                  'Al Akhbar'.tr(),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall,
-                ),
-                actions: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.notifications_none,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    onPressed:
-                        () => Navigator.of(
-                          context,
-                        ).pushNamed(AppRoutes.notificationPageRoute),
+      appBar: size.isCompact
+          ? AppBar(
+              backgroundColor: theme.colorScheme.surface,
+              surfaceTintColor: theme.colorScheme.surface,
+              elevation: 0,
+              centerTitle: true,
+              leading: Builder(
+                builder: (context) {
+                  return IconButton(
+                    icon: Icon(Icons.menu, color: theme.colorScheme.onSurface),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  );
+                },
+              ),
+              title: Text(
+                'Al Akhbar'.tr(),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall,
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    Icons.notifications_none,
+                    color: theme.colorScheme.onSurface,
                   ),
-                ],
-              )
-              : null,
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.notificationPageRoute),
+                ),
+              ],
+            )
+          : null,
       body: SafeArea(
         child: Center(
           child: ResponsiveContent(
@@ -94,10 +108,8 @@ class _SettingsViewState extends State<SettingsView> {
                             value: isDarkMode,
                             activeThumbColor: theme.colorScheme.onPrimary,
                             activeTrackColor: theme.colorScheme.secondary,
-                            onChanged:
-                                (value) => context
-                                    .read<ThemeCubit>()
-                                    .toggleTheme(value),
+                            onChanged: (value) =>
+                                context.read<ThemeCubit>().toggleTheme(value),
                           );
                         },
                       ),
@@ -106,46 +118,20 @@ class _SettingsViewState extends State<SettingsView> {
                       icon: Icons.language,
                       title: 'Language'.tr(),
                       trailing: _ValueWithChevron(
-                        value:
-                            context.locale.languageCode == 'ar'
-                                ? "العربية"
-                                : 'English',
+                        value: context.locale.languageCode == 'ar'
+                            ? "العربية"
+                            : 'English',
                       ),
                       onTap: () => _showLanguagePicker(context),
                     ),
                     SettingsTile(
                       icon: Icons.notifications_none,
                       title: 'Notifications'.tr(),
-                      trailing: GestureDetector(
-                        onTap:
-                            () => setState(
-                              () => _notifications = !_notifications,
-                            ),
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color:
-                                _notifications
-                                    ? theme.colorScheme.secondary
-                                    : Colors.transparent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color:
-                                  _notifications
-                                      ? theme.colorScheme.secondary
-                                      : theme.colorScheme.outline,
-                              width: 1.5,
-                            ),
-                          ),
-                          child:
-                              _notifications
-                                  ? Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: theme.colorScheme.onSecondary,
-                                  )
-                                  : null,
+                      trailing: Semantics(
+                        label: 'Notifications'.tr(),
+                        child: Switch(
+                          value: _notifications,
+                          onChanged: _setNotifications,
                         ),
                       ),
                     ),
@@ -201,18 +187,17 @@ class _SettingsViewState extends State<SettingsView> {
                     SettingsTile(
                       icon: Icons.info_outline,
                       title: 'Version'.tr(),
-                      trailing:
-                          context.locale.languageCode == 'ar'
-                              ? Text(
-                                '(بناء ٤٢) ١.٠.٤',
-                                style: theme.textTheme.bodySmall,
-                                textAlign: TextAlign.start,
-                              )
-                              : Text(
-                                '1.0.4 (Build 42)',
-                                style: theme.textTheme.bodySmall,
-                                textAlign: TextAlign.end,
-                              ),
+                      trailing: context.locale.languageCode == 'ar'
+                          ? Text(
+                              '(بناء ١) ١.٠.٠',
+                              style: theme.textTheme.bodySmall,
+                              textAlign: TextAlign.start,
+                            )
+                          : Text(
+                              '1.0.0 (Build 1)',
+                              style: theme.textTheme.bodySmall,
+                              textAlign: TextAlign.end,
+                            ),
                       isLast: true,
                     ),
                   ],
@@ -224,11 +209,13 @@ class _SettingsViewState extends State<SettingsView> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () async {
+                      final navigator = Navigator.of(context);
                       await context.read<AuthCubit>().logout();
-                      if (!context.mounted) return;
-                      Navigator.of(
-                        context,
-                      ).pushReplacementNamed(AppRoutes.loginPageRoute);
+                      if (!navigator.mounted) return;
+                      navigator.pushNamedAndRemoveUntil(
+                        AppRoutes.loginPageRoute,
+                        (_) => false,
+                      );
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -299,10 +286,9 @@ void _showLanguagePicker(BuildContext context) {
             const SizedBox(height: 12),
             ListTile(
               title: const Text('English'),
-              trailing:
-                  sheetContext.locale.languageCode == 'en'
-                      ? const Icon(Icons.check, color: Colors.blue)
-                      : null,
+              trailing: sheetContext.locale.languageCode == 'en'
+                  ? const Icon(Icons.check, color: Colors.blue)
+                  : null,
               onTap: () async {
                 final nav = Navigator.of(sheetContext);
                 await context.setLocale(const Locale('en'));
@@ -311,10 +297,9 @@ void _showLanguagePicker(BuildContext context) {
             ),
             ListTile(
               title: const Text('العربية'),
-              trailing:
-                  sheetContext.locale.languageCode == 'ar'
-                      ? const Icon(Icons.check, color: Colors.blue)
-                      : null,
+              trailing: sheetContext.locale.languageCode == 'ar'
+                  ? const Icon(Icons.check, color: Colors.blue)
+                  : null,
               onTap: () async {
                 final nav = Navigator.of(sheetContext);
                 await context.setLocale(const Locale('ar'));

@@ -18,11 +18,8 @@ class SearchFilterSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (_) => BlocProvider.value(
-            value: cubit,
-            child: const SearchFilterSheet(),
-          ),
+      builder: (_) =>
+          BlocProvider.value(value: cubit, child: const SearchFilterSheet()),
     );
   }
 }
@@ -33,14 +30,33 @@ class _SearchFilterSheetState extends State<SearchFilterSheet> {
   DateTime? _from;
   DateTime? _to;
   String? _sources;
+  late final TextEditingController _sourcesController;
 
-  static Map<String, String> sortOptions = {
-    'relevance': 'Relevance'.tr(),
+  @override
+  void initState() {
+    super.initState();
+    final filter = context.read<SearchCubit>().filter;
+    _sortBy = filter.sortBy;
+    _language = filter.language;
+    _from = filter.from;
+    _to = filter.to;
+    _sources = filter.sources;
+    _sourcesController = TextEditingController(text: _sources);
+  }
+
+  @override
+  void dispose() {
+    _sourcesController.dispose();
+    super.dispose();
+  }
+
+  Map<String, String> get sortOptions => {
+    'relevancy': 'Relevance'.tr(),
     'popularity': 'Popularity'.tr(),
     'publishedAt': 'PublishedAt'.tr(),
   };
 
-  static Map<String, String> languageOptions = {
+  Map<String, String> get languageOptions => {
     'ar': 'Arabic'.tr(),
     'en': 'English'.tr(),
     'de': 'German'.tr(),
@@ -147,17 +163,16 @@ class _SearchFilterSheetState extends State<SearchFilterSheet> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children:
-          options.entries.map((entry) {
-            final isSelected = selected == entry.key;
-            return ChoiceChip(
-              label: Text(entry.value),
-              selected: isSelected,
-              onSelected: (_) {
-                onSelected(isSelected ? null : entry.key);
-              },
-            );
-          }).toList(),
+      children: options.entries.map((entry) {
+        final isSelected = selected == entry.key;
+        return ChoiceChip(
+          label: Text(entry.value),
+          selected: isSelected,
+          onSelected: (_) {
+            onSelected(isSelected ? null : entry.key);
+          },
+        );
+      }).toList(),
     );
   }
 
@@ -185,9 +200,9 @@ class _SearchFilterSheetState extends State<SearchFilterSheet> {
 
   Widget _buildSourcesField() {
     return TextField(
-      onChanged:
-          (value) => _sources = value.trim().isEmpty ? null : value.trim(),
-      controller: TextEditingController(text: _sources),
+      onChanged: (value) =>
+          _sources = value.trim().isEmpty ? null : value.trim(),
+      controller: _sourcesController,
       decoration: InputDecoration(
         hintText: 'Example: bbc-news, cnn'.tr(),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -227,16 +242,23 @@ class _SearchFilterSheetState extends State<SearchFilterSheet> {
   }
 
   Future<void> _pickDate({required bool isFrom}) async {
-    final initialDate = (isFrom ? _from : _to) ?? DateTime.now();
+    final today = DateUtils.dateOnly(DateTime.now());
+    final firstDate = isFrom ? DateTime(2000) : (_from ?? DateTime(2000));
+    final lastDate = isFrom ? (_to ?? today) : today;
+    final selected = DateUtils.dateOnly((isFrom ? _from : _to) ?? today);
+    final initialDate = selected.isBefore(firstDate)
+        ? firstDate
+        : (selected.isAfter(lastDate) ? lastDate : selected);
 
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(2026, 8, 10),
-      lastDate: DateTime(2026, 9, 11),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
 
     if (picked == null) return;
+    if (!mounted) return;
 
     setState(() {
       if (isFrom) {
@@ -254,6 +276,7 @@ class _SearchFilterSheetState extends State<SearchFilterSheet> {
       _from = null;
       _to = null;
       _sources = null;
+      _sourcesController.clear();
     });
   }
 

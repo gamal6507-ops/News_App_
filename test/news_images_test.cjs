@@ -21,7 +21,7 @@ function response() {
 
 const feed = `<?xml version="1.0"?><rss version="2.0" xmlns:News="https://www.bing.com/news"><channel><item>
   <title>خبر مصري مصوّر</title><link>http://www.bing.com/news/apiclick.aspx?url=https%3A%2F%2Fpublisher.example%2Fstory</link>
-  <description>تفاصيل الخبر</description><pubDate>Wed, 18 Nov 2026 08:00:00 GMT</pubDate>
+  <description>تفاصيل الخبر</description><pubDate>${new Date().toUTCString()}</pubDate>
   <News:Source>الناشر</News:Source><News:Image>http://www.bing.com/th?id=ONUT.real-news-photo&amp;pid=News</News:Image>
 </item></channel></rss>`;
 
@@ -62,4 +62,14 @@ test('multiple publishers are OR site filters rather than words in the article',
   await news({ method: 'GET', query: { endpoint: 'v2/everything', q: 'technology', sources: 'bbc-news, cnn' } }, res);
   assert.match(target.searchParams.get('q'), /\(site:bbc\.com OR site:cnn\.com\)/);
   assert.equal(res.body.provider, 'bing-news');
+});
+
+test('headline keyword filters are preserved by the image provider', async () => {
+  delete process.env.NEWS_API_KEY;
+  let target;
+  global.fetch = async url => { target = new URL(url); return new Response(feed); };
+  const res = response();
+  await news({ method: 'GET', query: { endpoint: 'v2/top-headlines', country: 'eg', category: 'science', q: 'space exploration' } }, res);
+  assert.equal(res.body.provider, 'bing-news');
+  assert.match(target.searchParams.get('q'), /space exploration/);
 });

@@ -84,6 +84,7 @@ class NewspapersApp extends StatelessWidget {
       child: BlocBuilder<ThemeCubit, ThemeMode>(
         builder: (context, state) {
           return MaterialApp(
+            navigatorKey: NotificationService.navigatorKey,
             debugShowCheckedModeBanner: false,
             title: 'Newspapers App',
             theme: AppTheme.lightTheme,

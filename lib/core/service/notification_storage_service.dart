@@ -1,5 +1,6 @@
 import 'package:hive_flutter/adapters.dart';
 import 'package:news_paper_app/core/utils/date_utils.dart';
+import 'package:news_paper_app/core/service/notification_preferences.dart';
 import 'package:news_paper_app/domain/entities/notification_item.dart';
 
 class NotificationStorageService {
@@ -23,7 +24,7 @@ class NotificationStorageService {
       'id': item.id,
       'title': item.title,
       'body': item.body,
-      'time': DateUtilsApp.formatDate(item.time),
+      'time': item.time.toIso8601String(),
       'type': item.type.index,
       'isRead': item.isRead,
     };
@@ -42,13 +43,13 @@ class NotificationStorageService {
 
   Future<List<NotificationItem>> getAll() async {
     final box = await _openBox();
-    final items =
-        box.values.map((e) => _fromMap(e as Map)).toList()
-          ..sort((a, b) => b.time.compareTo(a.time));
+    final items = box.values.map((e) => _fromMap(e as Map)).toList()
+      ..sort((a, b) => b.time.compareTo(a.time));
     return items;
   }
 
   Future<void> add(NotificationItem item) async {
+    if (!NotificationPreferences.enabled) return;
     final box = await _openBox();
     await box.put(item.id, _toMap(item));
   }

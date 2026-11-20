@@ -146,6 +146,8 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  Future<void> syncNotificationToken() => _saveFcmToken();
+
   @override
   Future<void> close() {
     _operationId++;

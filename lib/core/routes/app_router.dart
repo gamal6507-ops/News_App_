@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:news_paper_app/core/routes/app_routes.dart';
+import 'package:news_paper_app/core/routes/auth_session_gate.dart';
 import 'package:news_paper_app/domain/entities/article.dart';
 import 'package:news_paper_app/presentation/pages/article_details_page.dart';
 import 'package:news_paper_app/presentation/pages/login_page.dart';
@@ -14,48 +15,64 @@ import 'package:news_paper_app/presentation/pages/splash_page.dart';
 import 'package:news_paper_app/presentation/widgets/responsive_shell.dart';
 
 class AppRouter {
+  static Route<dynamic> _protected(RouteSettings settings, Widget child) =>
+      MaterialPageRoute(
+        settings: settings,
+        builder: (_) => AuthSessionGate(child: child),
+      );
+
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.splashPageRoute:
-        return MaterialPageRoute(builder: (_) => const SplashPage());
-      case AppRoutes.loginPageRoute:
-        return MaterialPageRoute(builder: (_) => const LoginPage());
-      case AppRoutes.registerPageRoute:
-        return MaterialPageRoute(builder: (_) => const RegisterPage());
-      case AppRoutes.homePageRoute:
         return MaterialPageRoute(
-          builder: (_) => const ResponsiveShell(child: HomePage()),
+          settings: settings,
+          builder: (_) => const SplashPage(),
         );
+      case AppRoutes.loginPageRoute:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const LoginPage(),
+        );
+      case AppRoutes.registerPageRoute:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const RegisterPage(),
+        );
+      case AppRoutes.homePageRoute:
+        return _protected(settings, const ResponsiveShell(child: HomePage()));
       case AppRoutes.searchPageRoute:
         final autoFocus = settings.arguments as bool? ?? false;
-        return MaterialPageRoute(
-          builder: (_) => ResponsiveShell(child: SearchPage(autoFocus: autoFocus)),
+        return _protected(
+          settings,
+          ResponsiveShell(child: SearchPage(autoFocus: autoFocus)),
         );
       case AppRoutes.articleDetailsPageRoute:
-        final article = settings.arguments as Article;
-        return MaterialPageRoute(
-          builder: (_) => ArticleDetailsPage(article: article),
+        final article = settings.arguments;
+        return _protected(
+          settings,
+          article is Article
+              ? ArticleDetailsPage(article: article)
+              : const ResponsiveShell(child: HomePage()),
         );
       case AppRoutes.notificationPageRoute:
-        return MaterialPageRoute(
-          builder: (_) => ResponsiveShell(child: const NotificationPage()),
+        return _protected(
+          settings,
+          const ResponsiveShell(child: NotificationPage()),
         );
       case AppRoutes.savedPageRoute:
-        return MaterialPageRoute(
-          builder: (_) => ResponsiveShell(child: const SavedPage()),
-        );
+        return _protected(settings, const ResponsiveShell(child: SavedPage()));
       case AppRoutes.settingsPageRoute:
-        return MaterialPageRoute(
-          builder: (_) => ResponsiveShell(child: const SettingsPage()),
+        return _protected(
+          settings,
+          const ResponsiveShell(child: SettingsPage()),
         );
       case AppRoutes.privacyPolicyPageRoute:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => const PrivacyPolicyPage(),
         );
       default:
-        return MaterialPageRoute(
-          builder: (_) => const ResponsiveShell(child: HomePage()),
-        );
+        return _protected(settings, const ResponsiveShell(child: HomePage()));
     }
   }
 }

@@ -161,7 +161,7 @@ class AppDrawer extends StatelessWidget {
         onTap: () {
           Navigator.of(context).pop();
           if (currentRoute == destination.route) return;
-          Navigator.of(context).pushNamed(destination.route);
+          Navigator.of(context).pushReplacementNamed(destination.route);
         },
       ),
     );
@@ -192,8 +192,9 @@ class AppNavigationRail extends StatelessWidget {
       minExtendedWidth: 232,
       scrollable: true,
       backgroundColor: theme.scaffoldBackgroundColor,
-      labelType:
-          extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+      labelType: extended
+          ? NavigationRailLabelType.none
+          : NavigationRailLabelType.all,
       indicatorColor: colorScheme.secondary.withValues(alpha: 0.12),
       selectedIconTheme: IconThemeData(color: colorScheme.secondary),
       selectedLabelTextStyle: theme.textTheme.bodyMedium?.copyWith(
@@ -208,7 +209,7 @@ class AppNavigationRail extends StatelessWidget {
       onDestinationSelected: (index) {
         final route = AppDestination.all[index].route;
         if (currentRoute == route) return;
-        Navigator.of(context).pushNamed(route);
+        Navigator.of(context).pushReplacementNamed(route);
       },
       destinations: [
         for (final d in AppDestination.all)
@@ -239,36 +240,34 @@ class _RailBrand extends StatelessWidget {
           width: 40,
           height: 40,
           fit: BoxFit.contain,
-          errorBuilder:
-              (_, _, _) =>
-                  Icon(Icons.newspaper, color: theme.colorScheme.secondary),
+          errorBuilder: (_, _, _) =>
+              Icon(Icons.newspaper, color: theme.colorScheme.secondary),
         ),
       ),
     );
 
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 20),
-      child:
-          extended
-              ? SizedBox(
-                width: 200,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    logo,
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(
-                        'Al Akhbar'.tr(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.headlineSmall,
-                      ),
+      child: extended
+          ? SizedBox(
+              width: 200,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  logo,
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      'Al Akhbar'.tr(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.headlineSmall,
                     ),
-                  ],
-                ),
-              )
-              : Semantics(label: 'Al Akhbar'.tr(), child: logo),
+                  ),
+                ],
+              ),
+            )
+          : Semantics(label: 'Al Akhbar'.tr(), child: logo),
     );
   }
 }

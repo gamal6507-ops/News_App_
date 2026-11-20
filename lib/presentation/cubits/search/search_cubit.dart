@@ -18,6 +18,7 @@ class SearchCubit extends Cubit<SearchState> {
   String _query = '';
 
   SearchFilter _filter = const SearchFilter();
+  SearchFilter get filter => _filter;
 
   int _currentPage = 1;
 

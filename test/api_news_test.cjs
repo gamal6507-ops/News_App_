@@ -29,7 +29,7 @@ test('rejects mutations and paths outside the NewsAPI allowlist', async () => {
   }
 });
 
-const rss = (items) => `<?xml version="1.0"?><rss version="2.0"><channel>${items.map((item, index) => `<item><title>${item.title || `Headline ${index + 1}`}</title><link>${item.url || `https://news.google.com/rss/articles/article-${index}`}</link><pubDate>Tue, 17 Nov 2026 08:00:00 GMT</pubDate><source url="https://publisher.example">Publisher</source><description>&lt;p&gt;News summary&lt;/p&gt;</description></item>`).join('')}</channel></rss>`;
+const rss = (items) => `<?xml version="1.0"?><rss version="2.0"><channel>${items.map((item, index) => `<item><title>${item.title || `Headline ${index + 1}`}</title><link>${item.url || `https://news.google.com/rss/articles/article-${index}`}</link><pubDate>${item.date ?? new Date().toUTCString()}</pubDate><source url="https://publisher.example">Publisher</source><description>&lt;p&gt;News summary&lt;/p&gt;</description></item>`).join('')}</channel></rss>`;
 
 test('serves current Egyptian feeds without requiring a NewsAPI key', async () => {
   delete process.env.NEWS_API_KEY;
@@ -138,4 +138,65 @@ test('returns a gateway error when upstream is unreachable', async () => {
   const res = response();
   await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines' } }, res);
   assert.equal(res.statusCode, 502);
+});
+
+test('rejects impossible, ambiguous and reversed dates before contacting providers', async () => {
+  let calls = 0;
+  global.fetch = async () => { calls++; return new Response(rss([{}])); };
+  for (const filters of [
+    { from: '2026-02-31' }, { from: '2025-02-29' }, { from: '2026-13-01' },
+    { from: '19-11-2026' }, { from: '2026-11-19junk' },
+    { from: '2026-11-19T12:00:00Z' }, { from: '2026-11-19', to: '2026-01-01' },
+  ]) {
+    const res = response();
+    await handler({ method: 'GET', query: { endpoint: 'v2/everything', q: 'news', ...filters } }, res);
+    assert.equal(res.statusCode, 400, JSON.stringify(filters));
+  }
+  assert.equal(calls, 0);
+});
+
+test('accepts leap days and normalizes legacy sort spelling for the primary provider', async () => {
+  process.env.NEWS_API_KEY = 'server-test-key';
+  let target;
+  global.fetch = async url => { target = new URL(url); return Response.json({ status: 'ok', totalResults: 1, articles: [{ title: 'Leap day' }] }); };
+  const res = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/everything', q: 'news', from: '2024-02-29', to: '2024-02-29', sortBy: 'relevance' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(target.searchParams.get('sortBy'), 'relevancy');
+});
+
+test('rejects unknown locales, sort orders and unsupported headline filters explicitly', async () => {
+  let calls = 0;
+  global.fetch = async () => { calls++; return new Response(rss([{}])); };
+  for (const filters of [{country:'zz'}, {country:'xx'}, {language:'zz'}, {sortBy:'random'}, {from:'2026-11-01'}, {sources:'bbc-news',country:'us'}]) {
+    const res = response();
+    await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', ...filters } }, res);
+    assert.equal(res.statusCode, 400, JSON.stringify(filters));
+    assert.match(res.body.message, /filters|date|sources/i);
+  }
+  assert.equal(calls, 0);
+});
+
+test('valid territories remain accepted and feed-only languages bypass the primary provider', async () => {
+  process.env.NEWS_API_KEY = 'server-test-key';
+  for (const language of ['ja', 'ko', 'ur']) {
+    const targets = [];
+    global.fetch = async url => { targets.push(new URL(url)); return new Response(rss([{}])); };
+    const res = response();
+    await handler({ method: 'GET', query: { endpoint: 'v2/everything', q: 'news', language, country: 'aq' } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(targets.some(url => url.hostname === 'newsapi.org'), false, language);
+  }
+});
+
+test('Google headline fallback includes keyword and source constraints', async () => {
+  delete process.env.NEWS_API_KEY;
+  let target;
+  global.fetch = async url => { target = new URL(url); return new Response(rss([{}])); };
+  const res = response();
+  await handler({ method: 'GET', query: { endpoint: 'v2/top-headlines', q: 'space exploration', sources: 'bbc-news' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(target.pathname, '/rss/search');
+  assert.match(target.searchParams.get('q'), /space exploration/);
+  assert.match(target.searchParams.get('q'), /site:bbc.com/);
 });

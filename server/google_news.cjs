@@ -1,4 +1,5 @@
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
+const { plainText } = require('./feed_text.cjs');
 
 const COUNTRY_LANGUAGES = {
   eg: 'ar', sa: 'ar', ae: 'ar', qa: 'ar', kw: 'ar', jo: 'ar', lb: 'ar',
@@ -26,14 +27,16 @@ function buildFeedUrl(endpoint, query) {
   const country = String(query.country || LANGUAGE_COUNTRIES[query.language] || 'us').toLowerCase();
   const language = String(query.language || COUNTRY_LANGUAGES[country] || 'en');
   let path = '/rss';
-  if (endpoint === 'v2/everything') path = '/rss/search';
+  const search = endpoint === 'v2/everything' || (endpoint === 'v2/top-headlines' && (query.q || query.sources));
+  if (search) path = '/rss/search';
   else if (TOPICS[query.category]) path = `/rss/headlines/section/topic/${TOPICS[query.category]}`;
   const url = new URL(path, 'https://news.google.com');
   url.searchParams.set('hl', language);
   url.searchParams.set('gl', country.toUpperCase());
   url.searchParams.set('ceid', `${country.toUpperCase()}:${language}`);
-  if (endpoint === 'v2/everything') {
+  if (search) {
     const terms = [String(query.q || '')];
+    if (endpoint === 'v2/top-headlines' && query.category && query.category !== 'general') terms.push(query.category);
     if (query.from) terms.push(`after:${String(query.from).slice(0, 10)}`);
     if (query.to) {
       const end = new Date(`${String(query.to).slice(0, 10)}T00:00:00Z`);
@@ -59,13 +62,15 @@ async function fetchGoogleNews(endpoint, query) {
   const items = channel.item ? (Array.isArray(channel.item) ? channel.item : [channel.item]) : [];
   const seen = new Set();
   const articles = [];
+  const oldestHeadline = Date.now() - 7 * 86400000;
   for (const item of items) {
     const url = safeUrl(item.link);
-    const title = text(item.title).trim();
+    const title = plainText(text(item.title));
     if (!url || !title || seen.has(url)) continue;
     seen.add(url);
     const date = new Date(text(item.pubDate));
-    const summary = text(item.description).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (endpoint === 'v2/top-headlines' && date.getTime() < oldestHeadline) continue;
+    const summary = plainText(text(item.description));
     articles.push({
       source: { id: null, name: text(item.source) || 'Google News' },
       author: text(item.source) || null,
