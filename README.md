@@ -1,5 +1,16 @@
 # Al Akhbar
 
+**Flutter news-reader application** with headline feeds, categories, regional news selection, article details, live search, bookmarks, light/dark themes, and English/Arabic support.
+
+**Explore:** [Live web demo](https://news-app-five-kappa-90.vercel.app/) · [12-screen portfolio gallery](https://ahmed-gamal-portfolio-alpha.vercel.app/#work)
+
+> **Demo note:** The web application requires sign-in. News images and articles are fetched from third-party services; publisher availability and image access can vary.
+
+**Core technologies:** Flutter, Dart, Firebase Authentication, Vercel news API.
+
+---
+
+
 A Flutter news application for web and mobile, with Arabic/English support,
 Firebase authentication, headline categories, search, saved articles, and themes.
 
